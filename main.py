@@ -1,5 +1,7 @@
 import numpy as np
 import csv
+import math
+
 class Pokemon:
     def __init__(self, row):
         self.name = row[0]
@@ -37,10 +39,52 @@ class Pokemon:
             "water": float(row[30]),
         }
         self.capture_rate = int(row[31])
+class Util:
+    def duelFightSimulator(self, pok1, pok2):
+        k = 10
+        if len(pok1.types) == 1:
+            against2 = pok2.against.get(pok1.types[0])
+        elif len(pok1.types) == 2:
+            against2 = max(pok2.against.get(pok1.types[0]), pok2.against.get(pok1.types[1]))
+        Dmg_12 = (pok1.attack*against2)/(k*pok2.defense)
 
+        if len(pok2.types) == 1:
+            against1 = pok1.against.get(pok2.types[0])
+        elif len(pok2.types) == 2:
+            against1 = max(pok1.against.get(pok2.types[0]), pok1.against.get(pok2.types[1]))
+        Dmg_21 = (pok2.attack*against1)/(k*pok1.defense)
 
-with open("data.csv", newline='') as file:
-    reader = csv.reader(file, delimiter=';')
-    pList = []
-    for row in reader:
-        pList.append(Pokemon(row))
+        T_12 = math.ceil(pok2.hp/Dmg_12)
+        T_21 = math.ceil(pok1.hp/Dmg_21)
+
+        if T_12 < T_21:
+            return 1
+        elif T_12 > T_21:
+            return 2
+        else:
+            return 0
+def testFight(pList, idx_1, idx_2):
+    if(idx_2 <= 0 or idx_1 <= 0):
+        print("Index mniejszy od 0, nie ma takiego pokemona")
+        return
+    p1 = pList[idx_1-1]
+    p2 = pList[idx_2-1]
+    print(p1.name + " vs. " + p2.name)
+    u = Util()
+    result = u.duelFightSimulator(p1,p2)
+    if(result == 1):
+        print("\tWygrywa: " + p1.name)
+    elif(result == 2):
+        print("\tWygrywa: " + p2.name)
+    if (result == 0):
+        print("\tRemis: ")
+
+if __name__ == '__main__':
+    with open("data.csv", newline='') as file:
+        reader = csv.reader(file, delimiter=';')
+        pList = []
+        iterReader = iter(reader)
+        next(iterReader)
+        for row in iterReader:
+            pList.append(Pokemon(row))
+        testFight(pList,25,7)
