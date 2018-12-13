@@ -1,6 +1,7 @@
-import numpy as np
 import csv
-import math
+from typing import List
+import numpy as np
+
 
 class Pokemon:
     def __init__(self, row):
@@ -11,14 +12,14 @@ class Pokemon:
         self.types = [row[4]]
         if row[5]:
             self.types.append(row[5])
-        self.hp = int(row[6])
+        self.health = int(row[6])
         self.attack = int(row[7])
         self.defense = int(row[8])
-        self.sp_attack = int(row[9])
-        self.sp_defense = int(row[10])
+        self.special_attack = int(row[9])
+        self.special_defense = int(row[10])
         self.speed = int(row[11])
         self.base_total = int(row[12])
-        self.against = {
+        self.vulnerability_against = {
             "bug": float(row[13]),
             "dark": float(row[14]),
             "dragon": float(row[15]),
@@ -39,52 +40,51 @@ class Pokemon:
             "water": float(row[30]),
         }
         self.capture_rate = int(row[31])
-class Util:
-    def duelFightSimulator(self, pok1, pok2):
-        k = 10
-        if len(pok1.types) == 1:
-            against2 = pok2.against.get(pok1.types[0])
-        elif len(pok1.types) == 2:
-            against2 = max(pok2.against.get(pok1.types[0]), pok2.against.get(pok1.types[1]))
-        Dmg_12 = (pok1.attack*against2)/(k*pok2.defense)
 
-        if len(pok2.types) == 1:
-            against1 = pok1.against.get(pok2.types[0])
-        elif len(pok2.types) == 2:
-            against1 = max(pok1.against.get(pok2.types[0]), pok1.against.get(pok2.types[1]))
-        Dmg_21 = (pok2.attack*against1)/(k*pok1.defense)
+    def get_damage_taken_multiplier(self, enemy) -> float:
+        return max(self.vulnerability_against[enemy_type] for enemy_type in enemy.types)
 
-        T_12 = math.ceil(pok2.hp/Dmg_12)
-        T_21 = math.ceil(pok1.hp/Dmg_21)
+    def get_number_of_turns_to_get_killed(self, enemy) -> float:
+        defense_coefficient = 10
+        damage_taken = (enemy.attack * self.get_damage_taken_multiplier(enemy)) / (defense_coefficient * self.defense)
+        return self.health/damage_taken
 
-        if T_12 < T_21:
-            return 1
-        elif T_12 > T_21:
-            return 2
-        else:
-            return 0
-def testFight(pList, idx_1, idx_2):
-    if(idx_2 <= 0 or idx_1 <= 0):
-        print("Index mniejszy od 0, nie ma takiego pokemona")
-        return
-    p1 = pList[idx_1-1]
-    p2 = pList[idx_2-1]
-    print(p1.name + " vs. " + p2.name)
-    u = Util()
-    result = u.duelFightSimulator(p1,p2)
-    if(result == 1):
-        print("\tWygrywa: " + p1.name)
-    elif(result == 2):
-        print("\tWygrywa: " + p2.name)
-    if (result == 0):
-        print("\tRemis: ")
+    def score_fight(self, enemy) -> float:
+        turns_to_kill_enemy = np.ceil(enemy.get_number_of_turns_to_get_killed(self))
+        turns_to_get_killed = np.ceil(self.get_number_of_turns_to_get_killed(enemy))
+        if turns_to_kill_enemy < turns_to_get_killed:
+            return 1.0  # 'self' wins
+        if turns_to_kill_enemy > turns_to_get_killed:
+            return 0.0  # 'self' loses
+        return 0.5  # draw
+
+
+def test_fight(pokemon1, pokemon2):
+    print(pokemon1.name + " vs. " + pokemon2.name)
+    result = pokemon1.score_fight(pokemon2)
+    if result == 1.0:
+        print(f"\tWinner: {pokemon1.name}")
+    elif result == 0.0:
+        print(f"\tWinner: {pokemon2.name}")
+    elif result == 0.5:
+        print("\tDraw")
+
+
+def read_pokemons(filename="data.csv") -> List[Pokemon]:
+    pokemons = []
+    with open(filename, newline='') as file:
+        reader = csv.reader(file, delimiter=';')
+        iter_reader = iter(reader)
+        next(iter_reader)
+        for row in iter_reader:
+            pokemons.append(Pokemon(row))
+    return pokemons
+
+
+def temporary_main():
+    pokemons = read_pokemons()
+    test_fight(pokemons[24], pokemons[6])
+
 
 if __name__ == '__main__':
-    with open("data.csv", newline='') as file:
-        reader = csv.reader(file, delimiter=';')
-        pList = []
-        iterReader = iter(reader)
-        next(iterReader)
-        for row in iterReader:
-            pList.append(Pokemon(row))
-        testFight(pList,25,7)
+    temporary_main()
