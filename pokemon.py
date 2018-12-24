@@ -1,4 +1,6 @@
 import csv
+import itertools
+from sys import float_info
 from typing import Dict, Set
 import numpy as np
 
@@ -25,7 +27,7 @@ class Pokemon:
             "dragon": float(row[15]),
             "electric": float(row[16]),
             "fairy": float(row[17]),
-            "fight": float(row[18]),
+            "fighting": float(row[18]),
             "fire": float(row[19]),
             "flying": float(row[20]),
             "ghost": float(row[21]),
@@ -47,15 +49,20 @@ class Pokemon:
     def get_number_of_turns_to_get_killed(self, enemy) -> float:
         defense_coefficient = 10
         damage_taken = (enemy.attack * self.get_damage_taken_multiplier(enemy)) / (defense_coefficient * self.defense)
+        if damage_taken == 0.0:
+            return float_info.max
         return self.health/damage_taken
 
     def score_fight(self, enemy) -> float:
         turns_to_kill_enemy = np.ceil(enemy.get_number_of_turns_to_get_killed(self))
         turns_to_get_killed = np.ceil(self.get_number_of_turns_to_get_killed(enemy))
         if turns_to_kill_enemy < turns_to_get_killed:
+            print(f"{self.name} attacks {enemy.name} --> {self.name} score is 1.0")
             return 1.0  # 'self' wins
         if turns_to_kill_enemy > turns_to_get_killed:
+            print(f"{self.name} attacks {enemy.name} --> {self.name} score is 0.0")
             return 0.0  # 'self' loses
+        print(f"{self.name} attacks {enemy.name} --> {self.name} score is 0.5")
         return 0.5  # draw
 
     def type_as_one_string(self):
@@ -71,7 +78,7 @@ class Pokemon:
             self.vulnerability_against["dragon"],
             self.vulnerability_against["electric"],
             self.vulnerability_against["fairy"],
-            self.vulnerability_against["fight"],
+            self.vulnerability_against["fighting"],
             self.vulnerability_against["fire"],
             self.vulnerability_against["flying"],
             self.vulnerability_against["ghost"],
@@ -115,6 +122,13 @@ class PokemonList(list):
         for pokemon in self[1:]:
             array = np.maximum(array, pokemon.get_useful_numeric_parameters())
         return array
+
+    def generate_all_fight_results(self) -> np.array:
+        results = np.empty((len(self), len(self)))
+        for i in itertools.product(range(len(self)), repeat=2):
+            results[i] = self[i[0]].score_fight(self[i[1]])
+        return results
+
 
 def map_strings_to_numbers(strings: Set[str]) -> Dict[str, float]:
     step = 1.0 / len(strings)

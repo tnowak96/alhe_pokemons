@@ -17,8 +17,10 @@ def temporary_main():
     for pokemon in pokemons:
         print(pokemon.name)
     test_fight(pokemons[0], pokemons[1])
-    array = pokemons.to_numpy_array()
-    print(array)
+    pokemon_data_array = pokemons.to_numpy_array()
+    print(pokemon_data_array)
+    fight_results_array = pokemons.generate_all_fight_results()
+    print(fight_results_array)
 
 
 if __name__ == '__main__':
