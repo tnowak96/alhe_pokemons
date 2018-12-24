@@ -137,9 +137,9 @@ class Pokemon:
 
 def map_strings_to_numbers(strings: Set[str]) -> Dict[str, float]:
     step = 1.0 / len(strings)
-    number = 0.0
+    number = 1.0
     retval = {}
     for string in sorted(list(strings)):
         retval[string] = number
-        number += step
+        number -= step
     return retval
