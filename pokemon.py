@@ -1,5 +1,5 @@
 import csv
-from typing import List, Dict, Set
+from typing import Dict, Set
 import numpy as np
 
 
@@ -85,54 +85,54 @@ class Pokemon:
         array[20] = self.vulnerability_against["water"] / max_values_for_normalization[20]
         array[21] = self.capture_rate / max_values_for_normalization[21]
 
-    @classmethod
-    def max_values_of_useful_numeric_parameters(cls, pokemons) -> np.array:
-        array = np.empty(22)
-        array[0] = np.max([pokemon.health for pokemon in pokemons])
-        array[1] = np.max([pokemon.attack for pokemon in pokemons])
-        array[2] = np.max([pokemon.defense for pokemon in pokemons])
-        array[3] = np.max([pokemon.vulnerability_against["bug"] for pokemon in pokemons])
-        array[4] = np.max([pokemon.vulnerability_against["dark"] for pokemon in pokemons])
-        array[5] = np.max([pokemon.vulnerability_against["dragon"] for pokemon in pokemons])
-        array[6] = np.max([pokemon.vulnerability_against["electric"] for pokemon in pokemons])
-        array[7] = np.max([pokemon.vulnerability_against["fairy"] for pokemon in pokemons])
-        array[8] = np.max([pokemon.vulnerability_against["fight"] for pokemon in pokemons])
-        array[9] = np.max([pokemon.vulnerability_against["fire"] for pokemon in pokemons])
-        array[10] = np.max([pokemon.vulnerability_against["flying"] for pokemon in pokemons])
-        array[11] = np.max([pokemon.vulnerability_against["ghost"] for pokemon in pokemons])
-        array[12] = np.max([pokemon.vulnerability_against["grass"] for pokemon in pokemons])
-        array[13] = np.max([pokemon.vulnerability_against["ground"] for pokemon in pokemons])
-        array[14] = np.max([pokemon.vulnerability_against["ice"] for pokemon in pokemons])
-        array[15] = np.max([pokemon.vulnerability_against["normal"] for pokemon in pokemons])
-        array[16] = np.max([pokemon.vulnerability_against["poison"] for pokemon in pokemons])
-        array[17] = np.max([pokemon.vulnerability_against["psychic"] for pokemon in pokemons])
-        array[18] = np.max([pokemon.vulnerability_against["rock"] for pokemon in pokemons])
-        array[19] = np.max([pokemon.vulnerability_against["steel"] for pokemon in pokemons])
-        array[20] = np.max([pokemon.vulnerability_against["water"] for pokemon in pokemons])
-        array[21] = np.max([pokemon.capture_rate for pokemon in pokemons])
-        return array
 
+class PokemonList(list):
     @classmethod
-    def to_numpy_array(cls, pokemons) -> np.array:
-        all_types = set(pokemon.type_as_one_string() for pokemon in pokemons)
-        types_to_float_map = map_strings_to_numbers(all_types)
-        max_numeric_values = cls.max_values_of_useful_numeric_parameters(pokemons)
-        data = np.empty((len(pokemons), max_numeric_values.size + 1))
-        for index, pokemon in enumerate(pokemons):
-            data[index, 0] = types_to_float_map[pokemon.type_as_one_string()]
-            pokemon.fill_numpy_array_with_normalized_parameters(data[index, 1:], max_numeric_values)
-        return data
-
-    @classmethod
-    def read_pokemons(cls, filename="data.csv") -> List:
-        pokemons = []
+    def from_file(cls, filename="data.csv"):
+        pokemon_list = cls()
         with open(filename, newline='') as file:
             reader = csv.reader(file, delimiter=';')
             iter_reader = iter(reader)
             next(iter_reader)
             for row in iter_reader:
-                pokemons.append(cls(row))
-        return pokemons
+                pokemon_list.append(Pokemon(row))
+        return pokemon_list
+
+    def to_numpy_array(self) -> np.array:
+        all_types = set(pokemon.type_as_one_string() for pokemon in self)
+        types_to_float_map = map_strings_to_numbers(all_types)
+        max_numeric_values = self.max_values_of_useful_numeric_parameters()
+        data = np.empty((len(self), max_numeric_values.size + 1))
+        for index, pokemon in enumerate(self):
+            data[index, 0] = types_to_float_map[pokemon.type_as_one_string()]
+            pokemon.fill_numpy_array_with_normalized_parameters(data[index, 1:], max_numeric_values)
+        return data
+
+    def max_values_of_useful_numeric_parameters(self) -> np.array:
+        array = np.empty(22)
+        array[0] = np.max([pokemon.health for pokemon in self])
+        array[1] = np.max([pokemon.attack for pokemon in self])
+        array[2] = np.max([pokemon.defense for pokemon in self])
+        array[3] = np.max([pokemon.vulnerability_against["bug"] for pokemon in self])
+        array[4] = np.max([pokemon.vulnerability_against["dark"] for pokemon in self])
+        array[5] = np.max([pokemon.vulnerability_against["dragon"] for pokemon in self])
+        array[6] = np.max([pokemon.vulnerability_against["electric"] for pokemon in self])
+        array[7] = np.max([pokemon.vulnerability_against["fairy"] for pokemon in self])
+        array[8] = np.max([pokemon.vulnerability_against["fight"] for pokemon in self])
+        array[9] = np.max([pokemon.vulnerability_against["fire"] for pokemon in self])
+        array[10] = np.max([pokemon.vulnerability_against["flying"] for pokemon in self])
+        array[11] = np.max([pokemon.vulnerability_against["ghost"] for pokemon in self])
+        array[12] = np.max([pokemon.vulnerability_against["grass"] for pokemon in self])
+        array[13] = np.max([pokemon.vulnerability_against["ground"] for pokemon in self])
+        array[14] = np.max([pokemon.vulnerability_against["ice"] for pokemon in self])
+        array[15] = np.max([pokemon.vulnerability_against["normal"] for pokemon in self])
+        array[16] = np.max([pokemon.vulnerability_against["poison"] for pokemon in self])
+        array[17] = np.max([pokemon.vulnerability_against["psychic"] for pokemon in self])
+        array[18] = np.max([pokemon.vulnerability_against["rock"] for pokemon in self])
+        array[19] = np.max([pokemon.vulnerability_against["steel"] for pokemon in self])
+        array[20] = np.max([pokemon.vulnerability_against["water"] for pokemon in self])
+        array[21] = np.max([pokemon.capture_rate for pokemon in self])
+        return array
 
 
 def map_strings_to_numbers(strings: Set[str]) -> Dict[str, float]:

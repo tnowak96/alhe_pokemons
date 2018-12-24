@@ -1,4 +1,4 @@
-from pokemon import Pokemon
+from pokemon import PokemonList
 
 
 def test_fight(pokemon1, pokemon2):
@@ -13,9 +13,11 @@ def test_fight(pokemon1, pokemon2):
 
 
 def temporary_main():
-    pokemons = Pokemon.read_pokemons("data2.csv")
+    pokemons = PokemonList.from_file("data2.csv")
+    for pokemon in pokemons:
+        print(pokemon.name)
     test_fight(pokemons[0], pokemons[1])
-    array = Pokemon.to_numpy_array(pokemons)
+    array = pokemons.to_numpy_array()
     print(array)
 
 
