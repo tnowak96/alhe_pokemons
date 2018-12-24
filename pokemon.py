@@ -1,3 +1,4 @@
+from __future__ import annotations
 import csv
 import itertools
 from typing import Dict, Set
@@ -6,6 +7,7 @@ import numpy as np
 
 class Pokemon:
     def __init__(self, row):
+        #print(f"creating pokemon from {row}")
         self.name = row[0]
         self.pokedex_number = int(row[1])
         self.generation = int(row[2])
@@ -42,29 +44,31 @@ class Pokemon:
         }
         self.capture_rate = int(row[31])
 
-    def get_damage_taken_multiplier(self, enemy) -> float:
+    def get_damage_taken_multiplier(self, enemy: Pokemon) -> float:
         return max(self.vulnerability_against[enemy_type] for enemy_type in enemy.types)
 
-    def get_number_of_turns_to_get_killed(self, enemy) -> float:
+    def get_number_of_turns_to_get_killed(self, enemy: Pokemon) -> float:
         defense_coefficient = 10
         damage_taken = (enemy.attack * self.get_damage_taken_multiplier(enemy)) / (defense_coefficient * self.defense)
         if damage_taken == 0.0:
+            #print(f"{enemy.name} deals no damage to {self.name}")
             return float("inf")
+        #print(f"{enemy.name} deals {self.health/damage_taken} damage to {self.name}")
         return self.health/damage_taken
 
-    def score_fight(self, enemy) -> float:
+    def score_fight(self, enemy: Pokemon) -> float:
         turns_to_kill_enemy = np.ceil(enemy.get_number_of_turns_to_get_killed(self))
         turns_to_get_killed = np.ceil(self.get_number_of_turns_to_get_killed(enemy))
         if turns_to_kill_enemy < turns_to_get_killed:
-            print(f"{self.name} attacks {enemy.name} --> {self.name} score is 1.0")
+            #print(f"{self.name} attacks {enemy.name} -> {self.name} score is 1.0")
             return 1.0  # 'self' wins
         if turns_to_kill_enemy > turns_to_get_killed:
-            print(f"{self.name} attacks {enemy.name} --> {self.name} score is 0.0")
+            #print(f"{self.name} attacks {enemy.name} -> {self.name} score is 0.0")
             return 0.0  # 'self' loses
-        print(f"{self.name} attacks {enemy.name} --> {self.name} score is 0.5")
+        #print(f"{self.name} attacks {enemy.name} -> {self.name} score is 0.5")
         return 0.5  # draw
 
-    def type_as_one_string(self):
+    def type_as_one_string(self) -> str:
         return ' '.join(sorted(self.types))
 
     def get_useful_numeric_parameters(self) -> np.array:
@@ -96,7 +100,7 @@ class Pokemon:
 
 class PokemonList(list):
     @classmethod
-    def from_file(cls, filename="data.csv"):
+    def from_file(cls, filename="data.csv") -> PokemonList:
         pokemon_list = cls()
         with open(filename, newline='') as file:
             reader = csv.reader(file, delimiter=';')
@@ -114,6 +118,7 @@ class PokemonList(list):
         for index, pokemon in enumerate(self):
             data[index, 0] = types_to_float_map[pokemon.type_as_one_string()]
             data[index, 1:] = np.true_divide(pokemon.get_useful_numeric_parameters(), max_numeric_values)
+            #print(f"{pokemon.name} normalized to {data[index]}")
         return data
 
     def max_values_of_useful_numeric_parameters(self) -> np.array:
