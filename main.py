@@ -13,7 +13,7 @@ def test_fight(pokemon1, pokemon2):
 
 
 def temporary_main():
-    pokemons = PokemonList.from_file("data2.csv")
+    pokemons = PokemonList.from_file("data.csv")
     for pokemon in pokemons:
         print(pokemon.name)
     test_fight(pokemons[0], pokemons[1])

@@ -1,6 +1,5 @@
 import csv
 import itertools
-from sys import float_info
 from typing import Dict, Set
 import numpy as np
 
@@ -50,7 +49,7 @@ class Pokemon:
         defense_coefficient = 10
         damage_taken = (enemy.attack * self.get_damage_taken_multiplier(enemy)) / (defense_coefficient * self.defense)
         if damage_taken == 0.0:
-            return float_info.max
+            return float("inf")
         return self.health/damage_taken
 
     def score_fight(self, enemy) -> float:
