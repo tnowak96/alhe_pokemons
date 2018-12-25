@@ -1,6 +1,7 @@
 from __future__ import annotations
 import csv
 import itertools
+import functools
 from typing import Dict, Set
 import numpy as np
 
@@ -122,10 +123,7 @@ class PokemonList(list):
         return data
 
     def max_values_of_useful_numeric_parameters(self) -> np.array:
-        array = self[0].get_useful_numeric_parameters()
-        for pokemon in self[1:]:
-            array = np.maximum(array, pokemon.get_useful_numeric_parameters())
-        return array
+        return functools.reduce(np.maximum, map(lambda pokemon: pokemon.get_useful_numeric_parameters(), self))
 
     def generate_all_fight_results(self) -> np.array:
         results = np.empty((len(self), len(self)))
