@@ -1,6 +1,6 @@
 [MASTER]
 
 # disable "Missing module docstring"
-disable=C0111
+disable=C0111,too-many-instance-attributes
 
 max-line-length=120
