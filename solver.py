@@ -1,6 +1,7 @@
 from __future__ import annotations
 import random
 from typing import List
+from plotter import draw_3D_plot
 import numpy as np
 
 class Solver:
@@ -9,6 +10,7 @@ class Solver:
     # - optional search trace (solutions generated in each iterations with goal functions) - now everything is printed
 
     def __init__(self, all_fights_results: np.array):
+        self.team_results_history = np.zeros((1, 7))
         random.seed(0)  # for now hardcoded (deterministic runtime)
         self.fights = all_fights_results
 
@@ -17,23 +19,26 @@ class Solver:
         best_team_indices = team.indices.copy()
         best_score = 0.0
         for i in range(iterations):
-            score = team.goal_function()
+            score, team_results = team.goal_function()
+            self.team_results_history = np.append(self.team_results_history, team_results, axis=0)
             print(f"{i}: team {team.indices}, scores: {score}, best pokemon index: {team.best_pokemon_index()}")
             if score > best_score:
                 print(f"updating best score ({score} > {best_score})")
                 best_score = score
                 best_team_indices = team.indices.copy()
             team = team.random_neighbor()
+        draw_3D_plot(self.team_results_history)
         return best_score, best_team_indices
 
 
 class PokemonTeam:
     def __init__(self, all_fights_results: np.array, indices_in_team: List[int] = None):
+        self.team_size = 6
         self.all_fights_results = all_fights_results
         self.number_of_all_pokemons = all_fights_results.shape[0]
         if all_fights_results.shape != (self.number_of_all_pokemons, self.number_of_all_pokemons):
             raise ValueError(f"all_fights_results array should be square matrix, got shape {all_fights_results.shape}")
-        self.indices = indices_in_team if indices_in_team is not None else list(range(6))
+        self.indices = indices_in_team if indices_in_team is not None else list(range(self.team_size))
         if len(self.indices) > self.number_of_all_pokemons:
             raise ValueError(f"cannot initialize pokemon team - team size (got {len(self.indices)}) " +
                              f"cannot be greater than number of all pokemons (got {self.number_of_all_pokemons})")
@@ -55,11 +60,14 @@ class PokemonTeam:
                 index_in_enemies_list -= 1
         raise RuntimeError("this code should be unreachable")
 
-    def goal_function(self) -> float:
+    def goal_function(self):
         result = 0.0
+        team_results = np.zeros((1,len(self.indices)))
         for enemy_index in range(self.number_of_all_pokemons):
             result += np.max(self.score_fights(enemy_index))
-        return result
+            team_results = np.add(team_results,self.score_fights(enemy_index))
+        team_results = np.array([np.append(team_results,result)])
+        return result, team_results
 
     def score_fights(self, enemy_index: int) -> np.array:
         self.individual_points.fill(0.0)
