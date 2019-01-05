@@ -1,7 +1,6 @@
 from __future__ import annotations
 import random
 from typing import List
-from plotter import draw_3D_plot
 import numpy as np
 
 class Solver:
@@ -27,8 +26,10 @@ class Solver:
                 best_score = score
                 best_team_indices = team.indices.copy()
             team = team.random_neighbor()
-        draw_3D_plot(self.team_results_history)
         return best_score, best_team_indices
+
+    def get_team_results_history(self):
+        return self.team_results_history
 
 
 class PokemonTeam:
@@ -61,13 +62,14 @@ class PokemonTeam:
         raise RuntimeError("this code should be unreachable")
 
     def goal_function(self):
-        result = 0.0
-        team_results = np.zeros((1,len(self.indices)))
+        team_score = 0.0
+        all_fights_results = np.zeros((1,len(self.indices)))
         for enemy_index in range(self.number_of_all_pokemons):
-            result += np.max(self.score_fights(enemy_index))
-            team_results = np.add(team_results,self.score_fights(enemy_index))
-        team_results = np.array([np.append(team_results,result)])
-        return result, team_results
+            fight_result = self.score_fights(enemy_index)
+            team_score += np.sum(fight_result)
+            all_fights_results = np.add(all_fights_results,fight_result)
+        all_fights_results = np.array([np.append(all_fights_results,team_score)])
+        return team_score, all_fights_results
 
     def score_fights(self, enemy_index: int) -> np.array:
         self.individual_points.fill(0.0)

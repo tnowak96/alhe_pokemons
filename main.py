@@ -1,6 +1,6 @@
 from pokemon import PokemonList
 from solver import Solver
-
+from plotter import draw_3D_plot
 
 def temporary_main():
     pokemons = PokemonList.from_file("data.csv")
@@ -9,9 +9,10 @@ def temporary_main():
     print("pokemons as numpy array:", pokemon_data_array, sep='\n')
     fight_results_array = pokemons.generate_all_fight_results()
     solver = Solver(fight_results_array)
-    best_score, best_team_indices = solver.random_search(iterations=4481)
+    best_score, best_team_indices = solver.random_search(iterations=1_500_000)
+    draw_3D_plot(solver.get_team_results_history())
     winners_names = list(map(lambda index: pokemons[index].name, best_team_indices))
-    print(f"best score: {best_score}, best team: {winners_names}")
+    print(f"best score: {best_score}, best team: {winners_names}, best team indices: {best_team_indices}")
 
 
 if __name__ == '__main__':
