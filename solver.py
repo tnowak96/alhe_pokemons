@@ -2,6 +2,7 @@ from __future__ import annotations
 import random
 from typing import List
 import numpy as np
+from simanneal import Annealer
 
 class Solver:
     # some features that can be implemented:
@@ -29,8 +30,40 @@ class Solver:
             team = team.random_neighbor()
         return best_score, best_team_indices
 
+    def simulated_annealing(self, iterations: int = 100) -> (float, List[int]):
+        initial_team = PokemonTeam(self.fights)
+        sa = SimAnneal(initial_team)
+        shedule = {'tmin': 2.5 , 'tmax': 25_000.0, 'steps': 1200000, 'updates': 100}
+        sa.set_schedule(shedule)
+        # auto_schedule = sa.auto(minutes=0.1)
+        # sa.set_schedule(auto_schedule)
+        # print(f"auto_shedule 1min{auto_schedule}")
+
+        sa.copy_strategy = 'slice'
+        best_team, best_score = sa.anneal()
+        self.team_results_history = sa.team_results_history
+        return best_score, best_team
+
     def get_team_results_history(self):
         return self.team_results_history
+
+class SimAnneal(Annealer):
+    def __init__(self, pokemonTeam):
+        self.team = pokemonTeam
+        self.team_results_history = np.zeros((1, 7))
+        super(SimAnneal, self).__init__(pokemonTeam.indices)
+
+    def move(self):
+        #load new state as indices of Neighbour team
+        self.team = self.team.random_neighbor()
+        self.state = self.team.indices
+
+    def energy(self):
+        # calculate states energy, which will by minimized
+        # minus sign is becouse our problem is maximizing goal function
+        team_results = self.team.goal_function()
+        self.team_results_history = np.append(self.team_results_history, team_results, axis=0)
+        return -(team_results[0][-1])
 
 class PokemonTeam:
     def __init__(self, all_fights_results: np.array, indices_in_team: List[int] = None):
