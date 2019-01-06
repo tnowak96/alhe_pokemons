@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from matplotlib import colors as mcolors
 import numpy as np
 
-matplotlib.use('Qt5Agg')
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 
