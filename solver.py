@@ -18,7 +18,8 @@ class Solver:
         best_team_indices = team.indices.copy()
         best_score = 0.0
         for i in range(iterations):
-            score, team_results = team.goal_function()
+            team_results = team.goal_function()
+            score = team_results[0][-1]
             self.team_results_history = np.append(self.team_results_history, team_results, axis=0)
             print(f"{i}: team {team.indices}, scores: {score}, best pokemon index: {team.best_pokemon_index()}")
             if score > best_score:
@@ -31,19 +32,20 @@ class Solver:
     def get_team_results_history(self):
         return self.team_results_history
 
-
 class PokemonTeam:
     def __init__(self, all_fights_results: np.array, indices_in_team: List[int] = None):
-        self.team_size = 6
         self.all_fights_results = all_fights_results
         self.number_of_all_pokemons = all_fights_results.shape[0]
         if all_fights_results.shape != (self.number_of_all_pokemons, self.number_of_all_pokemons):
             raise ValueError(f"all_fights_results array should be square matrix, got shape {all_fights_results.shape}")
-        self.indices = indices_in_team if indices_in_team is not None else list(range(self.team_size))
+        self.indices = indices_in_team if indices_in_team is not None else list(range(6))
         if len(self.indices) > self.number_of_all_pokemons:
             raise ValueError(f"cannot initialize pokemon team - team size (got {len(self.indices)}) " +
                              f"cannot be greater than number of all pokemons (got {self.number_of_all_pokemons})")
         self.individual_points = np.zeros(len(self.indices))
+
+    def get_team_size(self):
+        return len(self.indices)
 
     def random_neighbor(self) -> PokemonTeam:
         index_to_be_replaced = random.randrange(len(self.indices))
@@ -61,15 +63,15 @@ class PokemonTeam:
                 index_in_enemies_list -= 1
         raise RuntimeError("this code should be unreachable")
 
-    def goal_function(self):
+    def goal_function(self) -> np.array:
         team_score = 0.0
-        all_fights_results = np.zeros((1,len(self.indices)))
+        all_fights_results = np.zeros((1, len(self.indices)))
         for enemy_index in range(self.number_of_all_pokemons):
             fight_result = self.score_fights(enemy_index)
-            team_score += np.sum(fight_result)
-            all_fights_results = np.add(all_fights_results,fight_result)
-        all_fights_results = np.array([np.append(all_fights_results,team_score)])
-        return team_score, all_fights_results
+            team_score += np.sum(fight_result)/self.get_team_size()
+            all_fights_results = np.add(all_fights_results, fight_result)
+        all_fights_results = np.array([np.append(all_fights_results, team_score)])
+        return all_fights_results
 
     def score_fights(self, enemy_index: int) -> np.array:
         self.individual_points.fill(0.0)
