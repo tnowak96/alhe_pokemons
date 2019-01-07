@@ -33,6 +33,12 @@ def random_search(pokemons: PokemonList, iterations=100, save_history=False, pri
     )
 
 
+def greedy_search(pokemons: PokemonList) -> PokemonTeam:
+    total_individual_results = np.sum(pokemons.all_fights_results, axis=1)
+    best_indices = np.argsort(total_individual_results)
+    return PokemonTeam(pokemons, best_indices[-6:])
+
+
 class PokemonTeam:
     def __init__(self, pokemons: PokemonList, indices_in_team: List[int] = None):
         self.pokemons = pokemons
