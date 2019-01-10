@@ -48,17 +48,17 @@ def simulated_annealing(pokemons: PokemonList, iterations=100, save_history=Fals
     best_team_indices = team.indices.copy()
     best_score = 0.0
     sa = SimAnneal(team, save_history)
-    schedule = {'tmin': 2.5 , 'tmax': 25_000.0, 'steps': iterations, 'updates': 100}
+    schedule = {'tmin': 0.05 , 'tmax': 25_000.0, 'steps': iterations, 'updates': 100}
     sa.set_schedule(schedule)
     # auto_schedule = sa.auto(minutes=0.1)
     # sa.set_schedule(auto_schedule)
     # print(f"auto_shedule 1min{auto_schedule}")
-    sa.copy_strategy = 'slice'
-    best_team_indices, best_score = sa.anneal()
+    sa.copy_strategy = 'method'
+    best_team, best_score = sa.anneal()
     results_history = sa.team_results_history
     return SimulatedAnnealingResult(
         best_score=best_score,
-        best_team=PokemonTeam(pokemons, best_team_indices),
+        best_team=best_team,
         results_history=results_history
     )
 
@@ -68,19 +68,21 @@ def get_team_results_history(self):
 class SimAnneal(Annealer):
     def __init__(self, pokemonTeam, save_history=False):
         self.save_history = save_history
-        self.team = pokemonTeam
         self.team_results_history = np.zeros((1, 7))
-        super(SimAnneal, self).__init__(pokemonTeam.indices)
+        super(SimAnneal, self).__init__(pokemonTeam)
 
     def move(self):
         #load new state as indices of Neighbour team
-        self.team = self.team.random_neighbor()
-        self.state = self.team.indices
+        import pdb
+        previous = self.state.copy()
+        self.state = self.state.random_neighbor()
+        if len(set(self.state.indices)) != 6:
+            pdb.set_trace()
 
     def energy(self):
         # calculate states energy, which will by minimized
         # minus sign is becouse our problem is maximizing goal function
-        team_results = self.team.goal_function()
+        team_results = self.state.goal_function()
         if self.save_history:
             self.team_results_history = np.append(self.team_results_history, team_results, axis=0)
         return -(team_results[0][-1])
@@ -96,18 +98,15 @@ class PokemonTeam:
     def random_neighbor(self) -> PokemonTeam:
         index_to_be_replaced = random.randrange(len(self.indices))
         new_pokemon_index = self.random_index_outside_of_team()
-        new_indices = self.indices
+        new_indices = self.indices.copy()
         new_indices[index_to_be_replaced] = new_pokemon_index
         return PokemonTeam(self.pokemons, new_indices)
 
     def random_index_outside_of_team(self) -> int:
-        index_in_enemies_list = random.randrange(len(self.pokemons) - len(self.indices))
-        for index_in_pokemons_list in range(len(self.pokemons)):
-            if index_in_enemies_list == 0:
-                return index_in_pokemons_list
-            if index_in_pokemons_list not in self.indices:
-                index_in_enemies_list -= 1
-        raise RuntimeError("this code should be unreachable")
+        enemy_index = random.randrange(len(self.pokemons))
+        while enemy_index in self.indices:
+            enemy_index = random.randrange(len(self.pokemons))
+        return enemy_index
 
     def goal_function(self) -> np.array:
         results = np.zeros((1, len(self.indices) + 1))
@@ -119,7 +118,7 @@ class PokemonTeam:
     def names(self) -> List[str]:
         return list(self.pokemons[index].name for index in self.indices)
 
-    def __copy__(self):
+    def copy(self):
         return PokemonTeam(self.pokemons, self.indices.copy())
 
 
