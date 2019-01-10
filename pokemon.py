@@ -100,6 +100,11 @@ class Pokemon:
 
 
 class PokemonList(list):
+    def __init__(self, *args, **kwargs):
+        self.normalized_data = np.empty(0)
+        self.all_fights_results = np.empty(0)
+        super().__init__(*args, **kwargs)
+
     @classmethod
     def from_file(cls, filename="data.csv") -> PokemonList:
         pokemon_list = cls()
@@ -109,12 +114,17 @@ class PokemonList(list):
             next(iter_reader)
             for row in iter_reader:
                 pokemon_list.append(Pokemon(row))
+        pokemon_list.initialize_numpy_data()
         return pokemon_list
 
-    def to_numpy_array(self) -> np.array:
+    def initialize_numpy_data(self):
+        self.normalized_data = self._to_numpy_array()
+        self.all_fights_results = self._generate_all_fight_results()
+
+    def _to_numpy_array(self) -> np.array:
         all_types = set(pokemon.type_as_one_string() for pokemon in self)
         types_to_float_map = map_strings_to_numbers(all_types)
-        max_numeric_values = self.max_values_of_useful_numeric_parameters()
+        max_numeric_values = self._max_values_of_useful_numeric_parameters()
         data = np.empty((len(self), max_numeric_values.size + 1))
         for index, pokemon in enumerate(self):
             data[index, 0] = types_to_float_map[pokemon.type_as_one_string()]
@@ -122,10 +132,10 @@ class PokemonList(list):
             #print(f"{pokemon.name} normalized to {data[index]}")
         return data
 
-    def max_values_of_useful_numeric_parameters(self) -> np.array:
+    def _max_values_of_useful_numeric_parameters(self) -> np.array:
         return functools.reduce(np.maximum, map(lambda pokemon: pokemon.get_useful_numeric_parameters(), self))
 
-    def generate_all_fight_results(self) -> np.array:
+    def _generate_all_fight_results(self) -> np.array:
         results = np.empty((len(self), len(self)))
         for i in itertools.product(range(len(self)), repeat=2):
             results[i] = self[i[0]].score_fight(self[i[1]])
