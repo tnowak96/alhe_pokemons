@@ -45,10 +45,9 @@ def greedy_search(pokemons: PokemonList) -> PokemonTeam:
 def simulated_annealing(pokemons: PokemonList, iterations=100, save_history=False) -> SimulatedAnnealingResult:
     random.seed(0)  # for now hardcoded (deterministic runtime)
     team = PokemonTeam(pokemons)
-    best_team_indices = team.indices.copy()
     best_score = 0.0
     sa = SimAnneal(team, save_history)
-    schedule = {'tmin': 0.05 , 'tmax': 25_000.0, 'steps': iterations, 'updates': 100}
+    schedule = {'tmin': 0.05, 'tmax': 25_000.0, 'steps': iterations, 'updates': 100}
     sa.set_schedule(schedule)
     # auto_schedule = sa.auto(minutes=0.1)
     # sa.set_schedule(auto_schedule)
@@ -62,9 +61,6 @@ def simulated_annealing(pokemons: PokemonList, iterations=100, save_history=Fals
         results_history=results_history
     )
 
-def get_team_results_history(self):
-    return self.team_results_history
-
 class SimAnneal(Annealer):
     def __init__(self, pokemonTeam, save_history=False):
         self.save_history = save_history
@@ -73,11 +69,7 @@ class SimAnneal(Annealer):
 
     def move(self):
         #load new state as indices of Neighbour team
-        import pdb
-        previous = self.state.copy()
         self.state = self.state.random_neighbor()
-        if len(set(self.state.indices)) != 6:
-            pdb.set_trace()
 
     def energy(self):
         # calculate states energy, which will by minimized
