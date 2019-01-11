@@ -36,6 +36,7 @@ def random_search(pokemons: PokemonList, iterations=100, save_history=False,
     )
 
 
+# works only for goal_function_mean_fight_result, giving the optimal solution
 def greedy_search(pokemons: PokemonList) -> PokemonTeam:
     total_individual_results = np.sum(pokemons.all_fights_results, axis=1)
     best_indices = np.argsort(total_individual_results)
@@ -80,6 +81,8 @@ class SimAnneal(Annealer):
         return -(team_results[0][-1])
 
 class PokemonTeam:
+    current_goal_function_name = "goal_function_max_fight_result_with_capture_rate"
+
     def __init__(self, pokemons: PokemonList, indices_in_team: List[int] = None):
         self.pokemons = pokemons
         self.indices = indices_in_team if indices_in_team is not None else list(range(6))
@@ -101,14 +104,38 @@ class PokemonTeam:
         return enemy_index
 
     def goal_function(self) -> np.array:
+        function = getattr(self, PokemonTeam.current_goal_function_name)
+        return function()
+
+    def goal_function_max_fight_result(self) -> np.array:
+        results = self._score_fights()
+        results[0, -1] = np.max(results[0, :-1])
+        return results
+
+    def goal_function_mean_fight_result(self) -> np.array:
+        results = self._score_fights()
+        results[0, -1] = np.sum(results[0, :-1]) / float(len(self.indices))
+        return results
+
+    def goal_function_max_fight_result_with_capture_rate(self) -> np.array:
+        results = self._score_fights()
+        results[0, :-1] = np.multiply(results[0, :-1], self.normalized_capture_rates())
+        results[0, -1] = np.max(results[0, :-1])
+        return results
+
+    # helper function; returned array has one more element, so that it can easily be used in goal functions
+    def _score_fights(self) -> np.array:
         results = np.zeros((1, len(self.indices) + 1))
         for list_index, pokemon_index in enumerate(self.indices):
             results[0, list_index] = np.sum(self.pokemons.all_fights_results[pokemon_index, :])
-        results[0, -1] = np.sum(results[0, :-1]) / float(len(self.indices))
         return results
 
     def names(self) -> List[str]:
         return list(self.pokemons[index].name for index in self.indices)
+
+    # pokemons.normalized_data - see pokemon.py: Pokemon.get_useful_numeric_parameters, PokemonList._to_numpy_array
+    def normalized_capture_rates(self) -> np.array:
+        return np.array(list(self.pokemons.normalized_data[index, -1] for index in self.indices))
 
     def copy(self):
         return PokemonTeam(self.pokemons, self.indices.copy())
