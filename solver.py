@@ -18,7 +18,6 @@ AVAILABLE_GOAL_FUNCTIONS = [
 AVAILABLE_SOLVERS = ["random_search", "greedy_search", "simulated_annealing"]
 
 def random_search(pokemons: PokemonList, iterations=100, save_history=False) -> SearchResult:
-    random.seed(0)  # for now hardcoded (deterministic runtime)
     team = PokemonTeam(pokemons)
     best_team_indices = team.indices.copy()
     best_score = 0.0
@@ -53,7 +52,6 @@ def greedy_search(pokemons: PokemonList, **kwargs) -> SearchResult:
 
 
 def simulated_annealing(pokemons: PokemonList, iterations=100, save_history=False) -> SearchResult:
-    random.seed(0)  # for now hardcoded (deterministic runtime)
     team = PokemonTeam(pokemons)
     sa = SimAnneal(team, save_history)
     schedule = {'tmin': 0.05, 'tmax': 25_000.0, 'steps': iterations, 'updates': 100}
@@ -117,28 +115,30 @@ class PokemonTeam:
         return function()
 
     def goal_function_max_fight_result(self) -> np.array:
-        results = np.zeros((1, len(self.indices) + 1))
-        for enemy_index in range(len(self.pokemons)):
-            individual_scores_in_one_fight = self.score_fights_against_given_enemy(enemy_index)
-            results[0, :-1] += individual_scores_in_one_fight
-            results[0, -1] += np.max(individual_scores_in_one_fight)
-        return results
+        return self.goal_function_generic(
+            individual_scores_function=self.score_fights_against_given_enemy,
+            team_score_function=np.max
+        )
 
     def goal_function_mean_fight_result(self) -> np.array:
-        results = np.zeros((1, len(self.indices) + 1))
-        for enemy_index in range(len(self.pokemons)):
-            individual_scores_in_one_fight = self.score_fights_against_given_enemy(enemy_index)
-            results[0, :-1] += individual_scores_in_one_fight
-            results[0, -1] += np.sum(individual_scores_in_one_fight) / float(len(self.indices))
-        return results
+        return self.goal_function_generic(
+            individual_scores_function=self.score_fights_against_given_enemy,
+            team_score_function=lambda scores: np.sum(scores) / float(len(self.indices))
+        )
 
     def goal_function_max_fight_result_with_capture_rate(self) -> np.array:
+        return self.goal_function_generic(
+            individual_scores_function=lambda enemy_index:
+                np.multiply(self.score_fights_against_given_enemy(enemy_index), self.normalized_capture_rates()),
+            team_score_function=np.max
+        )
+
+    def goal_function_generic(self, individual_scores_function, team_score_function) -> np.array:
         results = np.zeros((1, len(self.indices) + 1))
         for enemy_index in range(len(self.pokemons)):
-            individual_scores_in_one_fight = self.score_fights_against_given_enemy(enemy_index)
-            individual_scores_in_one_fight = np.multiply(individual_scores_in_one_fight, self.normalized_capture_rates())
+            individual_scores_in_one_fight = individual_scores_function(enemy_index)
             results[0, :-1] += individual_scores_in_one_fight
-            results[0, -1] += np.max(individual_scores_in_one_fight)
+            results[0, -1] += team_score_function(individual_scores_in_one_fight)
         return results
 
     def score_fights_against_given_enemy(self, enemy_index: int) -> np.array:
@@ -146,6 +146,26 @@ class PokemonTeam:
         for list_index, pokemon_index in enumerate(self.indices):
             points_against_given_enemy[list_index] = self.pokemons.all_fights_results[pokemon_index, enemy_index]
         return points_against_given_enemy
+
+    # returns list containing number of fights in which given pokemon was the best one
+    # if many pokemons have the same score in a fight, all of them will be included
+    # - that is why sum of these numbers can be greater than number of all pokemons
+    def usage_statistics(self) -> List[int]:
+        results = [0] * len(self.indices)
+        individual_scores_function = None
+        if self.current_goal_function_name == "goal_function_max_fight_result_with_capture_rate":
+            individual_scores_function = lambda enemy_index: np.multiply(self.score_fights_against_given_enemy(enemy_index), self.normalized_capture_rates())
+        elif self.current_goal_function_name == "goal_function_max_fight_result":
+            individual_scores_function = self.score_fights_against_given_enemy
+        else:
+            return []  # usage statistics are unavailable
+        for enemy_index in range(len(self.pokemons)):
+            individual_scores_in_one_fight = individual_scores_function(enemy_index)
+            max_score = np.max(individual_scores_in_one_fight)
+            for i in range(len(self.indices)):
+                if individual_scores_in_one_fight[i] == max_score:
+                    results[i] += 1
+        return results
 
     def names(self) -> List[str]:
         return list(self.pokemons[index].name for index in self.indices)

@@ -24,6 +24,7 @@ def run(params):
 
 def print_team_details(team: solver.PokemonTeam):
     print(f"best team normalized capture rates: {team.normalized_capture_rates()}")
+    print(f"pokemon usage statistics: {team.usage_statistics()}")
     print("best team in terms of all goal functions:")
     for function in solver.AVAILABLE_GOAL_FUNCTIONS:
         solver.PokemonTeam.current_goal_function_name = function
