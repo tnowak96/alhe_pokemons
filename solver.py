@@ -9,13 +9,13 @@ from pokemon import PokemonList
 
 SearchResult = namedtuple("SearchResult", ["best_score", "best_team", "results_history"])
 
-available_goal_functions = [
+AVAILABLE_GOAL_FUNCTIONS = [
     "goal_function_max_fight_result",
     "goal_function_mean_fight_result",
     "goal_function_max_fight_result_with_capture_rate"
 ]
 
-available_solvers = ["random_search", "greedy_search", "simulated_annealing"]
+AVAILABLE_SOLVERS = ["random_search", "greedy_search", "simulated_annealing"]
 
 def random_search(pokemons: PokemonList, iterations=100, save_history=False) -> SearchResult:
     random.seed(0)  # for now hardcoded (deterministic runtime)
@@ -40,8 +40,7 @@ def random_search(pokemons: PokemonList, iterations=100, save_history=False) -> 
 
 
 # works only for goal_function_mean_fight_result, giving the optimal solution
-# parameters iterations and save_history are just to unify interface with other search functions
-def greedy_search(pokemons: PokemonList, iterations=1, save_history=True) -> SearchResult:
+def greedy_search(pokemons: PokemonList, **kwargs) -> SearchResult:
     total_individual_results = np.sum(pokemons.all_fights_results, axis=1)
     best_indices = np.argsort(total_individual_results)
     best_team = PokemonTeam(pokemons, best_indices[-6:])
@@ -89,6 +88,7 @@ class SimAnneal(Annealer):
             self.team_results_history = np.append(self.team_results_history, team_results, axis=0)
         return -(team_results[0][-1])
 
+
 class PokemonTeam:
     current_goal_function_name = "goal_function_max_fight_result_with_capture_rate"
 
@@ -117,27 +117,35 @@ class PokemonTeam:
         return function()
 
     def goal_function_max_fight_result(self) -> np.array:
-        results = self._score_fights()
-        results[0, -1] = np.max(results[0, :-1])
+        results = np.zeros((1, len(self.indices) + 1))
+        for enemy_index in range(len(self.pokemons)):
+            individual_scores_in_one_fight = self.score_fights_against_given_enemy(enemy_index)
+            results[0, :-1] += individual_scores_in_one_fight
+            results[0, -1] += np.max(individual_scores_in_one_fight)
         return results
 
     def goal_function_mean_fight_result(self) -> np.array:
-        results = self._score_fights()
-        results[0, -1] = np.sum(results[0, :-1]) / float(len(self.indices))
+        results = np.zeros((1, len(self.indices) + 1))
+        for enemy_index in range(len(self.pokemons)):
+            individual_scores_in_one_fight = self.score_fights_against_given_enemy(enemy_index)
+            results[0, :-1] += individual_scores_in_one_fight
+            results[0, -1] += np.sum(individual_scores_in_one_fight) / float(len(self.indices))
         return results
 
     def goal_function_max_fight_result_with_capture_rate(self) -> np.array:
-        results = self._score_fights()
-        results[0, :-1] = np.multiply(results[0, :-1], self.normalized_capture_rates())
-        results[0, -1] = np.max(results[0, :-1])
+        results = np.zeros((1, len(self.indices) + 1))
+        for enemy_index in range(len(self.pokemons)):
+            individual_scores_in_one_fight = self.score_fights_against_given_enemy(enemy_index)
+            individual_scores_in_one_fight = np.multiply(individual_scores_in_one_fight, self.normalized_capture_rates())
+            results[0, :-1] += individual_scores_in_one_fight
+            results[0, -1] += np.max(individual_scores_in_one_fight)
         return results
 
-    # helper function; returned array has one more element, so that it can easily be used in goal functions
-    def _score_fights(self) -> np.array:
-        results = np.zeros((1, len(self.indices) + 1))
+    def score_fights_against_given_enemy(self, enemy_index: int) -> np.array:
+        points_against_given_enemy = np.empty(len(self.indices))
         for list_index, pokemon_index in enumerate(self.indices):
-            results[0, list_index] = np.sum(self.pokemons.all_fights_results[pokemon_index, :])
-        return results
+            points_against_given_enemy[list_index] = self.pokemons.all_fights_results[pokemon_index, enemy_index]
+        return points_against_given_enemy
 
     def names(self) -> List[str]:
         return list(self.pokemons[index].name for index in self.indices)
