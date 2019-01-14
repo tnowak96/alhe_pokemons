@@ -1,23 +1,41 @@
+import argparse
 from pokemon import PokemonList
 import solver
 from plotter import draw_3d_plot, draw_2d_plot
 
 
-
-def temporary_main():
-    pokemons = PokemonList.from_file("data.csv")
-    # greedy_team = solver.greedy_search(pokemons)
-    # print(f"greedy_team: {greedy_team.names()}, goal function: {round(greedy_team.goal_function()[0][-1],2)}")
-    # pokemon_data_array is unused now, can be used later to determine neighbors in terms of stats
-    # print("pokemons as numpy array:", pokemons.normalized_data, sep='\n')
-    search_result = solver.simulated_annealing(pokemons, iterations=80_000, save_history=False)
-    # draw_3D_plot(search_result.results_history)
-    # draw_2d_plot(search_result.results_history)
+def run(params):
+    pokemons = PokemonList.from_file(params.file)
+    solver.PokemonTeam.current_goal_function_name = params.goal_function
+    solver_function = getattr(solver, params.solver_function)
+    search_result = solver_function(pokemons, iterations=params.iterations, save_history=(params.plot2d or params.plot3d))
+    if params.plot3d:
+        draw_3d_plot(search_result.results_history)
+    if params.plot2d:
+        draw_2d_plot(search_result.results_history)
     print(f"best score: {round(search_result.best_score,2)}, best team: {search_result.best_team.names()}")
-    print(f"best team normalized capture rates: {search_result.best_team.normalized_capture_rates()}")
-    solver.PokemonTeam.current_goal_function_name = "goal_function_mean_fight_result"
-    print(f"best team goal_function_mean_fight_result: {search_result.best_team.goal_function()[0, -1]}")
-    
+    if params.team_details:
+        print(f"best team normalized capture rates: {search_result.best_team.normalized_capture_rates()}")
+        # some other info can be added, for example results in terms of other goal functions:
+        # solver.PokemonTeam.current_goal_function_name = "goal_function_mean_fight_result"
+        # print(f"best team goal_function_mean_fight_result: {search_result.best_team.goal_function()[0, -1]}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Find the best pokemon team in terms of a given goal function.")
+    parser.add_argument("--file", dest="file", default="data.csv",
+                        help="file with pokemon data (default data.csv)")
+    parser.add_argument("--goal", dest="goal_function", default="goal_function_max_fight_result_with_capture_rate",
+                        help="goal function for pokemon team (default goal_function_max_fight_result_with_capture_rate)")
+    parser.add_argument("--solver", dest="solver_function", default="simulated_annealing",
+                        help="solver function for pokemon team (default simulated_annealing)")
+    parser.add_argument("--iterations", dest="iterations", type=int, default=10000, help="number of iterations (default 10000)")
+    parser.add_argument("--plot2d", dest="plot2d", action="store_const", const=True, default=False, help="draw 2d plot")
+    parser.add_argument("--plot3d", dest="plot3d", action="store_const", const=True, default=False, help="draw 3d plot")
+    parser.add_argument("--details", dest="team_details", action="store_const", const=True, default=False,
+                        help="show detailed data about winner team")
+    run(parser.parse_args())
+
 
 if __name__ == '__main__':
-    temporary_main()
+    main()

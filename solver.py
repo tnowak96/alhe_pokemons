@@ -7,12 +7,10 @@ from pokemon import PokemonList
 from simanneal import Annealer
 
 
-RandomSearchResult = namedtuple("RandomSearchResult", ["best_score", "best_team", "results_history"])
-SimulatedAnnealingResult = namedtuple("SimulatedAnnealingResult", ["best_score", "best_team", "results_history"])
+SearchResult = namedtuple("SearchResult", ["best_score", "best_team", "results_history"])
 
 
-def random_search(pokemons: PokemonList, iterations=100, save_history=False,
-                  print_results=False) -> RandomSearchResult:
+def random_search(pokemons: PokemonList, iterations=100, save_history=False) -> SearchResult:
     random.seed(0)  # for now hardcoded (deterministic runtime)
     team = PokemonTeam(pokemons)
     best_team_indices = team.indices.copy()
@@ -23,13 +21,11 @@ def random_search(pokemons: PokemonList, iterations=100, save_history=False,
         team_score = all_scores[0][-1]
         if save_history:
             results_history[i, :] = all_scores
-        _optional(print_results, print, f"{i}: team {team.indices}, scores: {team_score}")
         if team_score > best_score:
-            _optional(print_results, print, f"updating best score ({team_score} > {best_score})")
             best_score = team_score
             best_team_indices = team.indices.copy()
         team = team.random_neighbor()
-    return RandomSearchResult(
+    return SearchResult(
         best_score=best_score,
         best_team=PokemonTeam(pokemons, best_team_indices),
         results_history=results_history
@@ -37,16 +33,22 @@ def random_search(pokemons: PokemonList, iterations=100, save_history=False,
 
 
 # works only for goal_function_mean_fight_result, giving the optimal solution
-def greedy_search(pokemons: PokemonList) -> PokemonTeam:
+# parameters iterations and save_history are just to unify interface with other search functions
+def greedy_search(pokemons: PokemonList, iterations=1, save_history=True) -> SearchResult:
     total_individual_results = np.sum(pokemons.all_fights_results, axis=1)
     best_indices = np.argsort(total_individual_results)
-    return PokemonTeam(pokemons, best_indices[-6:])
+    best_team = PokemonTeam(pokemons, best_indices[-6:])
+    scores = best_team.goal_function()
+    return SearchResult(
+        best_score=scores[0][-1],
+        best_team=best_team,
+        results_history=scores
+    )
 
 
-def simulated_annealing(pokemons: PokemonList, iterations=100, save_history=False) -> SimulatedAnnealingResult:
+def simulated_annealing(pokemons: PokemonList, iterations=100, save_history=False) -> SearchResult:
     random.seed(0)  # for now hardcoded (deterministic runtime)
     team = PokemonTeam(pokemons)
-    best_score = 0.0
     sa = SimAnneal(team, save_history)
     schedule = {'tmin': 0.05, 'tmax': 25_000.0, 'steps': iterations, 'updates': 100}
     sa.set_schedule(schedule)
@@ -56,8 +58,8 @@ def simulated_annealing(pokemons: PokemonList, iterations=100, save_history=Fals
     sa.copy_strategy = 'method'
     best_team, best_score = sa.anneal()
     results_history = sa.team_results_history
-    return SimulatedAnnealingResult(
-        best_score=best_score,
+    return SearchResult(
+        best_score=-best_score,
         best_team=best_team,
         results_history=results_history
     )
@@ -139,9 +141,3 @@ class PokemonTeam:
 
     def copy(self):
         return PokemonTeam(self.pokemons, self.indices.copy())
-
-
-def _optional(flag: bool, function, *args, **kwargs):
-    if flag:
-        return function(*args, **kwargs)
-    return None
