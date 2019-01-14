@@ -3,12 +3,19 @@ import random
 from typing import List
 from collections import namedtuple
 import numpy as np
-from pokemon import PokemonList
 from simanneal import Annealer
+from pokemon import PokemonList
 
 
 SearchResult = namedtuple("SearchResult", ["best_score", "best_team", "results_history"])
 
+available_goal_functions = [
+    "goal_function_max_fight_result",
+    "goal_function_mean_fight_result",
+    "goal_function_max_fight_result_with_capture_rate"
+]
+
+available_solvers = ["random_search", "greedy_search", "simulated_annealing"]
 
 def random_search(pokemons: PokemonList, iterations=100, save_history=False) -> SearchResult:
     random.seed(0)  # for now hardcoded (deterministic runtime)
