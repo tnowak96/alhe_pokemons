@@ -75,5 +75,5 @@ def draw_2d_plot(z):
 if __name__ == '__main__':
     if __name__ == '__main__':
         z_values = np.random.rand(100,7)
-        draw_3D_plot(z_values)
+        draw_3d_plot(z_values)
 
